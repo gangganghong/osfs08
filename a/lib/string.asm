@@ -18,6 +18,11 @@ global  strlen
 ; void* memcpy(void* es:p_dst, void* ds:p_src, int size);
 ; ------------------------------------------------------------------------
 memcpy:
+	;jmp	$
+	;jmp	$
+	;jmp	$
+	;jmp	$
+	;jmp	$
 	push	ebp
 	mov	ebp, esp
 

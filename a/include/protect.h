@@ -67,17 +67,17 @@ struct tss {
 /* 描述符索引 */
 #define	INDEX_DUMMY		0	/* ┓                          */
 #define	INDEX_FLAT_C		1	/* ┣ LOADER 里面已经确定了的. */
-#define	INDEX_FLAT_RW		2	/* ┃                          */
-#define	INDEX_VIDEO		3	/* ┛                          */
-#define	INDEX_TSS		4
-#define	INDEX_LDT_FIRST		5
+#define	INDEX_FLAT_RW		6	/* ┃                          */
+#define	INDEX_VIDEO		7	/* ┛                          */
+#define	INDEX_TSS		8
+#define	INDEX_LDT_FIRST		9
 /* 选择子 */
 #define	SELECTOR_DUMMY		   0		/* ┓                          */
 #define	SELECTOR_FLAT_C		0x08		/* ┣ LOADER 里面已经确定了的. */
-#define	SELECTOR_FLAT_RW	0x10		/* ┃                          */
-#define	SELECTOR_VIDEO		(0x18+3)	/* ┛<-- RPL=3                 */
-#define	SELECTOR_TSS		0x20		/* TSS. 从外层跳到内存时 SS 和 ESP 的值从里面获得. */
-#define SELECTOR_LDT_FIRST	0x28
+#define	SELECTOR_FLAT_RW	0x30		/* ┃                          */
+#define	SELECTOR_VIDEO		0x3b	/* ┛<-- RPL=3                 */
+#define	SELECTOR_TSS		0x40		/* TSS. 从外层跳到内存时 SS 和 ESP 的值从里面获得. */
+#define SELECTOR_LDT_FIRST	0x48
 
 #define	SELECTOR_KERNEL_CS	SELECTOR_FLAT_C
 #define	SELECTOR_KERNEL_DS	SELECTOR_FLAT_RW
