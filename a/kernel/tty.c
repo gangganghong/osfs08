@@ -199,6 +199,7 @@ PUBLIC int sys_printx(int _unused1, int _unused2, char* s, struct proc* p_proc)
 	 *        by `kernel.asm::save' and be greater than 0.
 	 *   -# printx() is called in Ring 1~3
 	 *      - k_reenter == 0.
+	 * 计算出字符串的物理内存地址。
 	 */
 	if (k_reenter == 0)  /* printx() called in Ring<1~3> */
 		p = va2la(proc2pid(p_proc), s);
@@ -207,33 +208,49 @@ PUBLIC int sys_printx(int _unused1, int _unused2, char* s, struct proc* p_proc)
 	else	/* this should NOT happen */
 		p = reenter_err;
 
+
+
 	/**
 	 * @note if assertion fails in any TASK, the system will be halted;
 	 * if it fails in a USER PROC, it'll return like any normal syscall
 	 * does.
+	 * MAG_CH_PANIC：panic函数导致sys_printx执行。
+	 * MAG_CH_ASSERT：assert导致函数sys_printx执行。
+	 * panic函数导致sys_printx执行，在显存多处打印错误信息，然后hlt。
+	 * assert导致函数sys_printx执行，并且是任务进程调用assert,在显存多处打印错误信息，然后hlt。
 	 */
 	if ((*p == MAG_CH_PANIC) ||
 	    (*p == MAG_CH_ASSERT && p_proc_ready < &proc_table[NR_TASKS])) {
+		// 发生这种错误后，不再执行任何代码。中断会让CPU执行其他代码。
+		// 这个函数在lib/kliba.asm，关闭中断。
 		disable_int();
 		char * v = (char*)V_MEM_BASE;
 		const char * q = p + 1; /* +1: skip the magic char */
 
+		// 从0xB8000开始，打印错误语句，然后把紧邻的16行修改为灰色。
+		// 重复这个操作，一直到显存耗尽。
+		// 最后停止。
 		while (v < (char*)(V_MEM_BASE + V_MEM_SIZE)) {
 			*v++ = *q++;
 			*v++ = RED_CHAR;
 			if (!*q) {
+				// value of SCR_WIDTH is 80.
 				while (((int)v - V_MEM_BASE) % (SCR_WIDTH * 16)) {
 					/* *v++ = ' '; */
+					// 不改变当前字符，只修改背景色为灰色。
 					v++;
 					*v++ = GRAY_CHAR;
 				}
+				// 显存在移动，p被重置为要被打印的字符串的开头位置，
+				// 和 const char * q = p + 1; /* +1: skip the magic char */ 相同。
 				q = p + 1;
 			}
 		}
-
+		// 内联汇编
 		__asm__ __volatile__("hlt");
 	}
 
+	// 打印错误信息，然后正常返回。
 	while ((ch = *p++) != 0) {
 		if (ch == MAG_CH_PANIC || ch == MAG_CH_ASSERT)
 			continue; /* skip the magic char */

@@ -41,6 +41,7 @@ PUBLIC void spin(char * func_name)
  *****************************************************************************/
 PUBLIC void assertion_failure(char *exp, char *file, char *base_file, int line)
 {
+	// sys_printx根据魔数，例如：MAG_CH_ASSERT，识别是assert还是panic，或者是普通打印语句。
 	printl("%c  assert(%s) failed: file: %s, base_file: %s, ln%d",
 	       MAG_CH_ASSERT,
 	       exp, file, base_file, line);

@@ -179,6 +179,9 @@ PUBLIC void* va2la(int pid, void* va)
 	u32 seg_base = ldt_seg_linear(p, INDEX_LDT_RW);
 	u32 la = seg_base + (u32)va;
 
+	// 初始化进程时，进程的代码段、数据段的地址空间的基地址都设置成0。
+	// 也就是说，seg_base = 0。
+	// 那么，la 应该等于 va。
 	if (pid < NR_TASKS + NR_PROCS) {
 		assert(la == (u32)va);
 	}
@@ -309,6 +312,7 @@ PRIVATE int msg_send(struct proc* current, int dest, MESSAGE* m)
 			  va2la(proc2pid(sender), m),
 			  sizeof(MESSAGE));
 		p_dest->p_msg = 0;
+		// 没必要弄这么复杂，直接 p_dest->p_flags = 0也可以。
 		p_dest->p_flags &= ~RECEIVING; /* dest has received the msg */
 		p_dest->p_recvfrom = NO_TASK;
 		unblock(p_dest);
@@ -434,6 +438,11 @@ PRIVATE int msg_receive(struct proc* current, int src, MESSAGE* m)
 		 */
 		p_from = &proc_table[src];
 
+		// B想从A接收Message。
+		// A就是p_from。
+		// 检查A：
+		// 1. 状态是否为要发生消息
+		// 2. A发送消息的目标是否为B。A若没有向B发送消息，B无法接收来自A的消息。
 		if ((p_from->p_flags & SENDING) &&
 		    (p_from->p_sendto == proc2pid(p_who_wanna_recv))) {
 			/* Perfect, src is sending a message to
@@ -447,9 +456,18 @@ PRIVATE int msg_receive(struct proc* current, int src, MESSAGE* m)
 				    * queue, so the queue must not be NULL
 				    */
 
+			// 已经确定了p_from就是消息来源，为什么还需要这段循环？
+			// 答案是：从q_sending中拿走了p_from，需要重整q_sending。
+			// 怎么重整？假如，队列中的元素顺序是这样的：pre-->p_from--->p_from->next_sending。
+			// 拿走p_from后，需要这样设置：pre->next_seding = p_from->next_sending。
+			// 所以，需要确定pre。
 			while (p) {
 				assert(p_from->p_flags & SENDING);
 
+				// 判断消息是否来自特定消息。
+				// p的值是prev。前提条件是 prev 不等于 0。
+				// 呵呵。这样的逻辑，我理解有点费力。
+				// p_who_wanna_recv->q_sending的第一个元素和src相等，有可能吗？
 				if (proc2pid(p) == src) /* if p is the one */
 					break;
 
@@ -477,10 +495,16 @@ PRIVATE int msg_receive(struct proc* current, int src, MESSAGE* m)
 		 */
 		if (p_from == p_who_wanna_recv->q_sending) { /* the 1st one */
 			assert(prev == 0);
+			// 取走了q_sending中的第一个，把第二个递补上来。
+			// 更准确的解释：取走了p_from，把p_from后面的元素递补上来。
 			p_who_wanna_recv->q_sending = p_from->next_sending;
+			// 这句是必要的吗？
+			// 被取走的那个元素的next_sending设置为0。
 			p_from->next_sending = 0;
 		}
 		else {
+			// prev为什么必须大于0？
+			// 如果pre等于0，那么，p_from是q_sending的第一个元素，和上面那种情况重复。
 			assert(prev);
 			prev->next_sending = p_from->next_sending;
 			p_from->next_sending = 0;

@@ -49,8 +49,8 @@ struct mess3 {
 	void*	m3p2;
 };
 typedef struct {
-	int source;
-	int type;
+	int source;				// sender 的 pid
+	int type;				// 1.mess1;2.mess2;3.mess3
 	union {
 		struct mess1 m1;
 		struct mess2 m2;
